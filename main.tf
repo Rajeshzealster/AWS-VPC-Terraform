@@ -1,25 +1,28 @@
+#VPC creation
 resource "aws_vpc" "myvpc" {
   cidr_block = var.cidr
 }
 
+#Subnet inside VPC
 resource "aws_subnet" "sub1" {
   vpc_id                  = aws_vpc.myvpc.id
   cidr_block              = "10.0.0.0/24"
   availability_zone       = "us-east-1a"
   map_public_ip_on_launch = true
 }
-
+#Subnet 2 creation in another AZ
 resource "aws_subnet" "sub2" {
   vpc_id                  = aws_vpc.myvpc.id
   cidr_block              = "10.0.1.0/24"
   availability_zone       = "us-east-1b"
   map_public_ip_on_launch = true
 }
-
+#Internet gateway for VPC
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.myvpc.id
 }
 
+#Route table with Internet gateway as destination
 resource "aws_route_table" "RT" {
   vpc_id = aws_vpc.myvpc.id
 
@@ -29,6 +32,7 @@ resource "aws_route_table" "RT" {
   }
 }
 
+#Route table assocaition to both sub nets
 resource "aws_route_table_association" "rta1" {
   subnet_id      = aws_subnet.sub1.id
   route_table_id = aws_route_table.RT.id
@@ -39,6 +43,7 @@ resource "aws_route_table_association" "rta2" {
   route_table_id = aws_route_table.RT.id
 }
 
+#Security group for VPC allowing inbound HTTP at port 80, SSH at port 22,& outbound traffic too
 resource "aws_security_group" "webSg" {
   name   = "web"
   vpc_id = aws_vpc.myvpc.id
@@ -70,11 +75,12 @@ resource "aws_security_group" "webSg" {
   }
 }
 
+#S# bucket creation
 resource "aws_s3_bucket" "example" {
-  bucket = "abhisheksterraform2023project"
+  bucket = "ThallaTerraformProject-2023"
 }
 
-
+#Server 1 creation in subnet 1
 resource "aws_instance" "webserver1" {
   ami                    = "ami-0261755bbcb8c4a84"
   instance_type          = "t2.micro"
@@ -83,6 +89,7 @@ resource "aws_instance" "webserver1" {
   user_data              = base64encode(file("userdata.sh"))
 }
 
+#server2 creation in subnet 2
 resource "aws_instance" "webserver2" {
   ami                    = "ami-0261755bbcb8c4a84"
   instance_type          = "t2.micro"
@@ -91,7 +98,7 @@ resource "aws_instance" "webserver2" {
   user_data              = base64encode(file("userdata1.sh"))
 }
 
-#create alb
+#creation of application load balancer and add both subnets to route application traffic
 resource "aws_lb" "myalb" {
   name               = "myalb"
   internal           = false
@@ -105,6 +112,7 @@ resource "aws_lb" "myalb" {
   }
 }
 
+#Traget group for ALB
 resource "aws_lb_target_group" "tg" {
   name     = "myTG"
   port     = 80
